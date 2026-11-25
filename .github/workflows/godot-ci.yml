@@ -16,8 +16,6 @@ jobs:
     env:
       GODOT_VERSION: 4.7.2
       GODOT_LINUX_SHA256: cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4
-      XDG_DATA_HOME: ${{ runner.temp }}/godot-data
-      XDG_CONFIG_HOME: ${{ runner.temp }}/godot-config
     defaults:
       run:
         shell: bash
@@ -41,6 +39,8 @@ jobs:
           chmod +x "$RUNNER_TEMP/godot-bin/$asset"
           ln -s "$RUNNER_TEMP/godot-bin/$asset" "$RUNNER_TEMP/godot-bin/godot"
           echo "$RUNNER_TEMP/godot-bin" >> "$GITHUB_PATH"
+          echo "XDG_DATA_HOME=$RUNNER_TEMP/godot-data" >> "$GITHUB_ENV"
+          echo "XDG_CONFIG_HOME=$RUNNER_TEMP/godot-config" >> "$GITHUB_ENV"
           "$RUNNER_TEMP/godot-bin/godot" --version
 
       - name: Import project
@@ -56,8 +56,10 @@ jobs:
           status=0
           for suite in menu puzzle ending; do
             echo "::group::$suite regression"
-            if ! timeout 60s godot --headless --path . --script "res://tests/${suite}_test.gd"; then
-              echo "::error::$suite regression failed or timed out"
+            log="$RUNNER_TEMP/$suite.log"
+            if ! timeout 60s godot --headless --path . --script "res://tests/${suite}_test.gd" --log-file "$log" ||
+               grep -Eq '^(FAIL|ERROR|SCRIPT ERROR):' "$log"; then
+              echo "::error::$suite regression failed, timed out, or reported an engine error"
               status=1
             fi
             echo "::endgroup::"
