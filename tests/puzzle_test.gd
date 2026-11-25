@@ -1,6 +1,6 @@
 extends SceneTree
 
-const TEMPLE := preload("res://temple.tscn")
+const MENU := preload("res://main_menu.tscn")
 
 var temple
 var failures := 0
@@ -11,9 +11,20 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	temple = TEMPLE.instantiate()
-	root.add_child(temple)
+	var menu := MENU.instantiate()
+	menu.settings_path = "user://pandora_puzzle_test_%d.cfg" % OS.get_process_id()
+	root.add_child(menu)
+	current_scene = menu
 	await _frames(4)
+	await _tap(KEY_ENTER)
+	_check(menu.page == "story", "Play starts the prologue from the launched menu")
+	await _tap(KEY_ESCAPE)
+	_check(current_scene != null and current_scene.scene_file_path == "res://temple.tscn",
+		"Skipping the prologue starts the playable temple")
+	if current_scene == null or current_scene.scene_file_path != "res://temple.tscn":
+		quit(1)
+		return
+	temple = current_scene
 
 	var portal := temple.room.get_node_or_null("ExitPortalModel") as Node3D
 	_check(portal != null, "The imported exit portal is present")
@@ -24,6 +35,10 @@ func _run() -> void:
 			and portal.find_children("*", "CollisionObject3D", true, false).is_empty()
 			and portal.find_children("*", "CollisionShape3D", true, false).is_empty(),
 			"The decorative exit portal has no blocking collision")
+
+	await _tap(KEY_E)
+	_check(not temple.released, "E has no effect out of reach")
+	_check(temple.status.text.contains("Move closer"), "E out of reach explains how to open the box")
 
 	if DisplayServer.get_name() != "headless":
 		_check(root.mode == Window.MODE_FULLSCREEN, "The game starts in fullscreen")
@@ -41,8 +56,6 @@ func _run() -> void:
 			"Mouse movement turns and tilts the first-person camera")
 		await _tap(KEY_R)
 
-	await _tap(KEY_E)
-	_check(not temple.released, "E has no effect out of reach")
 	await _tap(KEY_SPACE)
 	_check(temple.player.position.y > 0.08, "Space jumps from the floor")
 	var upward_speed: float = temple.player.velocity.y
@@ -51,14 +64,15 @@ func _run() -> void:
 	await _frames(60)
 	_check(temple.player.is_on_floor(), "The player lands after jumping")
 	await _walk(170)
-	_check(temple.reset_notice.contains("chasm"), "The gap blocks progress and falling resets the room")
+	_check(temple.status.text.contains("chasm") and temple.status.text.contains("reset"),
+		"The gap blocks progress and the HUD explains the falling reset")
 	_check(not temple.released and temple.room.bridge.disabled, "The bridge starts absent after a fall")
 
 	await _tap(KEY_R)
 	await _walk(99)
 	await _tap(KEY_SPACE)
 	await _walk(130)
-	_check(temple.reset_notice.contains("chasm"), "Jumping cannot bypass the gap before the slab falls")
+	_check(temple.notice_text.contains("chasm"), "Jumping cannot bypass the gap before the slab falls")
 
 	await _tap(KEY_R)
 	await _walk(52)
@@ -71,11 +85,19 @@ func _run() -> void:
 		"The imported lid opens around the existing hinge")
 	_check(temple.status.text.contains("Close the lid"), "Tremor cue tells the player to close the lid")
 	_check(temple.player.camera.position.length() > 0.0, "The camera shakes while the lid is open")
+	var held_interact := InputEventKey.new()
+	held_interact.physical_keycode = KEY_E
+	held_interact.pressed = true
+	held_interact.echo = true
+	root.push_input(held_interact, true)
+	await _frames(4)
+	_check(temple.lid_open, "Holding E does not toggle the lid again")
 
 	await _walk(44)
 	await _tap(KEY_SPACE)
 	await _walk(18)
-	_check(temple.reset_notice.contains("tremors"), "Entering the gap with the lid open resets the room")
+	_check(temple.status.text.contains("tremors") and temple.status.text.contains("Close the lid"),
+		"Entering the gap with the lid open resets the room and explains why")
 	_check(not temple.lid_open and not temple.landed and temple.room.bridge.disabled,
 		"Tremor reset restores the lid, slab, and collision")
 	_check(lid_model != null and is_zero_approx(lid_model.global_rotation.x),
@@ -86,6 +108,8 @@ func _run() -> void:
 	await _tap(KEY_E)
 	await _tap(KEY_E)
 	_check(not temple.lid_open and not temple.landed, "The lid can close while the slab is falling")
+	_check(temple.status.text.contains("Wait") and temple.room.bridge.disabled,
+		"Closing early shows the wait cue while the bridge remains absent")
 	_check(temple.player.camera.position == Vector3.ZERO, "Closing the lid stops the shaking")
 	await _frames(54)
 	_check(not temple.room.bridge.disabled and temple.status.text.contains("safe"),
@@ -132,6 +156,7 @@ func _walk(frame_count: int) -> void:
 
 func _send_key(key: Key, pressed: bool) -> void:
 	var event := InputEventKey.new()
+	event.keycode = key
 	event.physical_keycode = key
 	event.pressed = pressed
 	Input.parse_input_event(event)

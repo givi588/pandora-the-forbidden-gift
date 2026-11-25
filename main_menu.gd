@@ -4,6 +4,7 @@ const Geometry := preload("res://temple_geometry.gd")
 const TEMPLE := "res://temple.tscn"
 const KEY_ART := "res://assets/pandora_key_art.png"
 const SETTINGS_PATH := "user://pandora_settings.cfg"
+const DEFAULT_VOLUME := 80.0
 const GOLD := Color("#edca95")
 const IVORY := Color("#f5e8d3")
 const MUTED := Color("#b9c0ba")
@@ -23,12 +24,15 @@ var home_button: Button
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	settings.load(settings_path)
-	_set_volume(float(settings.get_value("audio", "master", 80.0)))
+	var load_error := settings.load(settings_path)
+	if load_error != OK and load_error != ERR_FILE_NOT_FOUND:
+		settings.clear()
+		push_warning("Pandora could not read settings: %s" % error_string(load_error))
+	_set_volume(_master_volume())
 	if not get_tree().has_meta("pandora_display_initialized"):
 		get_tree().set_meta("pandora_display_initialized", true)
 		if settings.has_section_key("display", "fullscreen"):
-			_apply_fullscreen(bool(settings.get_value("display", "fullscreen")))
+			_apply_fullscreen(_read_flag("display", "fullscreen"))
 	heading_font.font_names = PackedStringArray(["Georgia", "Times New Roman", "Liberation Serif"])
 	_build_background()
 	var margin := MarginContainer.new()
@@ -56,17 +60,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			"settings": _show_home()
 			"story": _enter_temple()
 	elif event.is_action_pressed("toggle_fullscreen") and DisplayServer.get_name() != "headless":
-		var fullscreen := get_window().mode == Window.MODE_WINDOWED
+		var fullscreen := not _is_fullscreen()
 		_save_option("display", "fullscreen", fullscreen)
 		_apply_fullscreen(fullscreen)
 		if page == "settings":
-			_show_settings()
+			var option := column.get_node_or_null("Fullscreen") as CheckButton
+			if option != null:
+				option.set_pressed_no_signal(fullscreen)
 
 
 func _build_background() -> void:
+	var texture: Texture2D
 	if ResourceLoader.exists(KEY_ART, "Texture2D"):
+		texture = load(KEY_ART) as Texture2D
+	if texture != null:
 		var art := TextureRect.new()
-		art.texture = load(KEY_ART)
+		art.texture = texture
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -119,7 +128,7 @@ func _show_settings() -> void:
 	volume.min_value = 0
 	volume.max_value = 100
 	volume.step = 5
-	var current := float(settings.get_value("audio", "master", 80.0))
+	var current := _master_volume()
 	var volume_label := _label("Master volume · %d%%" % current, 19, GOLD)
 	volume.value = current
 	volume.custom_minimum_size = Vector2(0, 36)
@@ -129,14 +138,14 @@ func _show_settings() -> void:
 		_save_option("audio", "master", value)
 	)
 	column.add_child(volume)
-	var fullscreen := bool(settings.get_value("display", "fullscreen", true))
+	var fullscreen := _read_flag("display", "fullscreen")
 	if DisplayServer.get_name() != "headless":
-		fullscreen = get_window().mode == Window.MODE_FULLSCREEN
+		fullscreen = _is_fullscreen()
 	_checkbox("Fullscreen", fullscreen, func(value: bool) -> void:
 		_save_option("display", "fullscreen", value)
 		_apply_fullscreen(value)
 	)
-	_checkbox("Show prologue", bool(settings.get_value("story", "enabled", true)), func(value: bool) -> void:
+	_checkbox("Show prologue", _read_flag("story", "enabled"), func(value: bool) -> void:
 		_save_option("story", "enabled", value)
 	)
 	_gap(8)
@@ -145,7 +154,7 @@ func _show_settings() -> void:
 
 
 func _play() -> void:
-	if bool(settings.get_value("story", "enabled", true)):
+	if _read_flag("story", "enabled"):
 		story_index = 0
 		_show_story()
 	else:
@@ -249,6 +258,25 @@ func _set_volume(value: float) -> void:
 	var master := AudioServer.get_bus_index("Master")
 	AudioServer.set_bus_mute(master, value <= 0.0)
 	AudioServer.set_bus_volume_db(master, linear_to_db(maxf(0.001, value / 100.0)))
+
+
+func _master_volume() -> float:
+	var saved: Variant = settings.get_value("audio", "master", DEFAULT_VOLUME)
+	if saved is float or saved is int:
+		var value := float(saved)
+		if is_finite(value):
+			return clampf(value, 0.0, 100.0)
+	return DEFAULT_VOLUME
+
+
+func _read_flag(section: String, key: String) -> bool:
+	var saved: Variant = settings.get_value(section, key, true)
+	return saved if saved is bool else true
+
+
+func _is_fullscreen() -> bool:
+	var mode := get_window().mode
+	return mode == Window.MODE_FULLSCREEN or mode == Window.MODE_EXCLUSIVE_FULLSCREEN
 
 
 func _apply_fullscreen(enabled: bool) -> void:
