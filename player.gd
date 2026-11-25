@@ -7,8 +7,8 @@ const MOUSE_SENSITIVITY := 0.0022
 var walking_enabled := true
 var jump_requested := false
 
-@onready var head: Node3D = $Head
-@onready var camera: Camera3D = $Head/Camera3D
+@onready var head := get_node_or_null("Head") as Node3D
+@onready var camera := get_node_or_null("Head/Camera3D") as Camera3D
 
 
 func _unhandled_input(event: InputEvent) -> void:
