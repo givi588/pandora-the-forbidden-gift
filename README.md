@@ -8,7 +8,7 @@ A first-person 3D puzzle in a Greek-inspired temple where opening a forbidden ch
 
 ## Gameplay video
 
-*Gameplay recording pending.* See the [in-game screenshots](art_previews/release-review.png) for views from the Windows release.
+[Watch the gameplay clip (12 seconds)](https://github.com/user-attachments/assets/1a32faf0-f872-4d53-a1d5-d9da2477fac7) · [More screenshots](art_previews/release-review.png)
 
 ## What you play
 
