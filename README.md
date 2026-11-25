@@ -2,7 +2,7 @@
 
 An original first-person 3D puzzle in which opening Pandora’s box drops a stone bridge across a temple chasm, while closing the lid makes the crossing safe.
 
-[Download v1.0.0 for Windows x64](https://github.com/givi588/pandora-the-forbidden-gift/releases/download/v1.0.0/Pandora-The-Forbidden-Gift-v1.0.0-Windows.zip) · [Release notes and SHA-256 checksum](https://github.com/givi588/pandora-the-forbidden-gift/releases/tag/v1.0.0)
+[Download v1.0.1 for Windows x64](https://github.com/givi588/pandora-the-forbidden-gift/releases/download/v1.0.1/Pandora-The-Forbidden-Gift-v1.0.1-Windows.zip) · [Release notes and SHA-256 checksum](https://github.com/givi588/pandora-the-forbidden-gift/releases/tag/v1.0.1)
 
 ![In-game view of Pandora's chest, the suspended slab, and the portal across the chasm](art_previews/release-temple.png)
 
@@ -18,7 +18,7 @@ An original first-person 3D puzzle in which opening Pandora’s box drops a ston
 
 ## Install and play
 
-Extract the Windows ZIP, run `Pandora.exe`, and select **Play**. The standalone build includes the engine notices. The download is the published v1.0.0 build. Use the build instructions below to try changes from a newer source revision.
+Extract the Windows ZIP, run `Pandora.exe`, and select **Play**. The standalone build includes the engine notices. Use the build instructions below to try changes from a newer source revision.
 
 | Input | Action |
 | --- | --- |
@@ -66,7 +66,7 @@ godot --headless --path . --script res://tests/ending_test.gd
 
 The puzzle regression starts at the main menu and uses movement input to reach the portal. Run all three test commands without `--headless` for fullscreen, cursor, camera, audio, and layout assertions. The [GitHub Actions workflow](.github/workflows/godot-ci.yml) imports the project and runs all three headless tests.
 
-For the exact release source, check out [v1.0.0](https://github.com/givi588/pandora-the-forbidden-gift/tree/v1.0.0). Install the matching [Godot 4.7.2 export templates](https://godotengine.org/download/archive/4.7.2-stable/), then use the checked-in Windows x64 preset and PowerShell. Here, `godot` refers to your Godot console executable.
+For the exact release source, check out [v1.0.1](https://github.com/givi588/pandora-the-forbidden-gift/tree/v1.0.1). Install the matching [Godot 4.7.2 export templates](https://godotengine.org/download/archive/4.7.2-stable/), then use the checked-in Windows x64 preset and PowerShell. Here, `godot` refers to your Godot console executable.
 
 ```powershell
 New-Item -ItemType Directory -Path dist/windows -Force | Out-Null

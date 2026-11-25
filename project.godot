@@ -4,7 +4,7 @@ config_version=5
 [application]
 
 config/name="Pandora"
-config/version="1.0.0"
+config/version="1.0.1"
 run/main_scene="res://main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
